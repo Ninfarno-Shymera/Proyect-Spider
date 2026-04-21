@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Página Personal</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="/static/Estilos.css">
+    <script src="/static/Cards.js" defer></script>
+    <script src="/static/Script.js" defer></script>
+</head>
+
+<body class="nav-oculto">
+    <header>Página de Prueba</header>
+
+    <nav id="mainNav" class="oculto">
+        <div class="nav-header">
+            <img src="/static/Penguin.gif" class="nav-icon" alt="Logo">
+            <span class="nav-titulo">Menú</span>
+        </div>
+        <div class="nav-botones">
+            <button onclick="mostrarContenido('inicio', this)" class="activo">Inicio</button>
+            <button onclick="mostrarContenido('proyectos', this)">Proyectos</button>
+        </div>
+    </nav>
+
+    <nav id="gammaNav" class="oculto">
+        <div class="nav-header">
+            <img src="/static/Penguin.gif" class="nav-icon" alt="Logo">
+            <span class="nav-titulo">Paletas</span>
+        </div>
+        <div class="nav-botones">
+            <button onclick="setGamma('escarlata', this)">Escarlata</button>
+            <button onclick="setGamma('violeta', this)" class="activo">Violeta</button>
+            <button onclick="setGamma('pastel', this)">Pastel</button>
+            <button onclick="setGamma('oceano', this)">Oceano</button>
+            <button onclick="setGamma('aqua', this)">Aguamarina</button>
+            <button onclick="setGamma('naranja', this)">Naranja</button>
+            <button onclick="setGamma('gris', this)">Gris</button>
+            <button onclick="setGamma('bosque', this)">Bosque</button>
+            <button onclick="setGamma('monocromo', this)">Monocromo</button>
+        </div>
+    </nav>
+
+    <main>
+        <button id="toggleBtn" onclick="toggleNav()"></button>
+        <button id="gammaBtn" onclick="cambiarGamma()">🎨</button>
+
+        <div id="contenido" class="contenido"></div>
+    </main>
+
+</body>
+
+</html>

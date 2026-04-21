@@ -1,0 +1,579 @@
+:root {
+    /* DIMENSIONES GENERALES */
+    --header-height: 80px;
+    --sidebar-width: 220px;
+    --radius-main: 12px;
+    --spacing-base: 10px;
+    --shadow-style: 5px 4px 12px;
+
+    --bg-main: #f4f2f8;
+    --bg-nav: #14111c;
+    --bg-header: #1e1635;
+    --bg-surface: #ffffff;
+    --bg-surface-2: #ece8f4;
+    --accent: #6d3cff;
+    --accent-hover: #8a5cff;
+    --accent-active: #a27bff;
+    --text-main: #1c1726;
+    --text-secondary: #5e5470;
+    --text-light: #f1eaff;
+    --border: #dcd2ee;
+    --border-soft: #ebe4f7;
+    --shadow-soft: rgba(109, 60, 255, 0.1);
+}
+
+body.gamma-escarlata {
+    --bg-main: #f6f2f4;
+    --bg-nav: #1c1114;
+    --bg-header: #2b0f12;
+    --bg-surface: #ffffff;
+    --bg-surface-2: #f0e7ea;
+    --accent: #c1121f;
+    --accent-hover: #e01b2d;
+    --accent-active: #ff3b4d;
+    --text-main: #2a1a1d;
+    --text-secondary: #6e4a50;
+    --text-light: #ffeef0;
+    --border: #e2cfd4;
+    --border-soft: #eedfe3;
+    --shadow-soft: rgba(0, 0, 0, 0.08);
+}
+
+/* TEMAS ADICIONALES */
+body.gamma-violeta {
+    --bg-main: #f4f2f8;
+    --bg-nav: #14111c;
+    --bg-header: #1e1635;
+    --bg-surface: #ffffff;
+    --bg-surface-2: #ece8f4;
+    --accent: #6d3cff;
+    --accent-hover: #8a5cff;
+    --accent-active: #a27bff;
+    --text-main: #1c1726;
+    --text-secondary: #5e5470;
+    --text-light: #f1eaff;
+    --border: #dcd2ee;
+    --border-soft: #ebe4f7;
+    --shadow-soft: rgba(109, 60, 255, 0.1);
+}
+
+body.gamma-pastel {
+
+    --bg-main: #f4f2f8;
+
+    --bg-nav: #f7e8d0;
+
+    --bg-header: #fff9f0;
+
+    --bg-surface: #ffffff;
+    --bg-surface-2: #fff1e0;
+
+    --accent: #fb923c;
+    --accent-hover: #f97316;
+    --accent-active: #ea580c;
+
+    --text-main: #431407;
+    --text-secondary: #9a3412;
+    --text-light: #431407;
+
+    --border: #e6d5bc;
+    --border-soft: #f2e2cf;
+}
+
+body.gamma-oceano {
+    --bg-main: #f0f4f8;
+    --bg-nav: #0d1b2a;
+    --bg-header: #0f253e;
+    --bg-surface: #ffffff;
+    --bg-surface-2: #e1e8ef;
+    --accent: #0077b6;
+    --accent-hover: #0096c7;
+    --accent-active: #48cae4;
+    --text-main: #1b263b;
+    --text-secondary: #415a77;
+    --text-light: #e0e1dd;
+    --border: #d0dce7;
+    --border-soft: #e5ecf3;
+    --shadow-soft: rgba(13, 27, 42, 0.1);
+}
+
+body.gamma-aqua {
+    --bg-main: #f2fcfc;
+    --bg-nav: #005f73;
+    --bg-header: #004d5c;
+    --bg-surface: #ffffff;
+    --bg-surface-2: #e0f2f1;
+    --accent: #0a9396;
+    --accent-hover: #1ed1d1;
+    --accent-active: #94d2bd;
+    --text-main: #00222b;
+    --text-secondary: #005f73;
+    --text-light: #e9ecef;
+    --border: #bee3db;
+    --border-soft: #d8e2dc;
+    --shadow-soft: rgba(0, 95, 115, 0.08);
+}
+
+body.gamma-naranja {
+    --bg-main: #f4f2f8;
+    --bg-nav: #3d2b1f;
+    --bg-header: #85401d;
+    --bg-surface: #ffffff;
+    --bg-surface-2: #fff7ed;
+    --accent: #f97316;
+    --accent-hover: #ea580c;
+    --accent-active: #c2410c;
+    --text-main: #1a1a1a;
+    --text-secondary: #4a4a4a;
+    --text-light: #fff7ed;
+    --border: #e5e7eb;
+    --border-soft: #f3f4f6;
+    --shadow-soft: rgba(0, 0, 0, 0.08);
+}
+
+body.gamma-gris {
+    --bg-main: #f4f2f8;
+    --bg-nav: #444444;
+    --bg-header: #222222;
+    --bg-surface: #ffffff;
+    --bg-surface-2: #f2f2f2;
+    --accent: #666666;
+    --accent-hover: #888888;
+    --accent-active: #333333;
+    --text-main: #111111;
+    --text-secondary: #555555;
+    --text-light: #ffffff;
+    --border: #cccccc;
+    --border-soft: #eeeeee;
+    --shadow-soft: rgba(0, 0, 0, 0.1);
+}
+
+body.gamma-bosque {
+    --bg-main: #f4f2f8;
+    --bg-nav: #2d3a30;
+    --bg-header: #3e5c46;
+    --bg-surface: #ffffff;
+    --bg-surface-2: #f0f4f0;
+    --accent: #22c55e;
+    --accent-hover: #16a34a;
+    --accent-active: #15803d;
+    --text-main: #064e3b;
+    --text-secondary: #374151;
+    --text-light: #f0fdf4;
+    --border: #d1fae5;
+    --border-soft: #ecfdf5;
+    --shadow-soft: rgba(6, 78, 59, 0.08);
+}
+
+body.gamma-monocromo {
+    /* FONDO DE PÁGINA Y ESTRUCTURA: Negro absoluto */
+    --bg-main: #000000;
+    --bg-nav: #000000;
+    --bg-header: #000000;
+
+    /* BLOQUES DE CONTENIDO: Blanco Puro */
+    --bg-surface: #ffffff;
+    --bg-surface-2: #ffffff;
+
+    /* ACCIONES (El color de acento es blanco para la inversión) */
+    --accent: #ffffff;
+    --accent-hover: #ffffff;
+    --accent-active: #ffffff;
+
+    /* TEXTO */
+    --text-main: #000000;
+    /* Negro para dentro de las cards blancas */
+    --text-secondary: #000000;
+    --text-light: #ffffff;
+    /* Blanco para Nav, Header y botones normales */
+
+    /* BORDES Y BRILLO */
+    --border: #ffffff;
+    --border-soft: #ffffff;
+    --shadow-glow: 0 0 12px 2px rgba(255, 255, 255, 0.7);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    height: 100vh;
+    display: grid;
+    grid-template-rows: var(--header-height) 1fr;
+    grid-template-columns: var(--sidebar-width) 1fr;
+    grid-template-areas: "header header" "sidebar main";
+    background: var(--bg-main);
+    color: var(--text-main);
+    transition: grid-template-columns 0.3s ease;
+}
+
+header {
+    grid-area: header;
+    background: var(--bg-header);
+    color: var(--text-light);
+    border-bottom: 1px solid var(--border-soft);
+    display: flex;
+    align-items: center;
+    padding-left: calc(var(--spacing-base) * 2);
+    font-size: 1.8rem;
+    font-weight: bold;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+nav {
+    grid-area: sidebar;
+    background: var(--bg-nav);
+    border-right: 1px solid var(--border-soft);
+    display: flex;
+    flex-direction: column;
+    padding: var(--spacing-base);
+    width: var(--sidebar-width);
+    transition: transform 0.3s ease, width 0.3s ease, opacity 0.3s ease;
+    z-index: 20;
+}
+
+.nav-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-base);
+    color: var(--accent-hover);
+    padding: var(--spacing-base);
+}
+
+/* Clase para el GIF/Icono */
+.nav-icon {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+}
+
+/* Clase para el texto del título */
+.nav-titulo {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+nav.oculto {
+    transform: translateX(-100%);
+    width: 0;
+    padding: 0;
+    opacity: 0;
+    overflow: hidden;
+    border-right: none;
+}
+
+/* BOTONES DE NAV */
+.nav-botones {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-base);
+    padding: var(--spacing-base);
+}
+
+nav button {
+    background: var(--accent);
+    color: var(--text-light);
+    border: 1px solid var(--accent);
+    padding: 12px;
+    cursor: pointer;
+    font-size: 1rem;
+    border-radius: var(--radius-main);
+    transition: all 0.2s ease;
+}
+
+nav button:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-active);
+}
+
+nav button.activo {
+    background: var(--bg-main);
+    /* Mismo color que el fondo de la página */
+    color: var(--text-main);
+    border: 1px solid var(--border-soft);
+    border-right: none;
+    /* Quitamos el borde derecho para que se "abra" */
+    border-radius: var(--radius-main) 0 0 var(--radius-main);
+
+    /* Esto hace que el botón se desplace a la derecha y cubra el borde del nav */
+    margin-right: -21px;
+    padding-right: 32px;
+    position: relative;
+    z-index: 10;
+}
+
+/* ÁREA PRINCIPAL */
+main {
+    grid-area: main;
+    padding: calc(var(--spacing-base) * 2.5);
+    overflow-y: auto;
+    position: relative;
+}
+
+/* Eliminamos el estilo de ".contenido" como contenedor único */
+#contenido {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+}
+
+/* Esta es la clase que le dará el aspecto a TODOS tus bloques */
+.bloque-blanco {
+    background: var(--bg-surface);
+    /* Blanco */
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-main);
+    box-shadow: var(--shadow-style) var(--shadow-soft);
+    padding: calc(var(--spacing-base) * 2);
+    margin-bottom: 20px;
+    /* Espacio entre un bloque y el siguiente */
+}
+
+/* La cuadrícula para que los proyectos estén uno al lado del otro */
+.proyectos-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    align-items: start;
+}
+
+/* Reset de márgenes para que los títulos no empujen el diseño */
+.bloque-blanco h2,
+.bloque-blanco h3 {
+    margin-top: 0;
+}
+
+/* CONTROLES FLOTANTES */
+#toggleBtn,
+#gammaBtn {
+    position: absolute;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--text-main);
+    z-index: 50;
+    font-size: 1.5rem;
+}
+
+#toggleBtn {
+    top: var(--spacing-base);
+    left: 0;
+    padding: 10px;
+}
+
+#gammaBtn {
+    top: 60px;
+    left: -10px;
+    display: block;
+}
+
+/* ESTADOS ESPECIALES */
+body.nav-oculto {
+    grid-template-columns: 0px 1fr;
+}
+
+body.gamma-abierto {
+    grid-template-columns: var(--sidebar-width) 1fr !important;
+}
+
+body.gamma-abierto #gammaNav {
+    transform: translateX(0);
+    width: var(--sidebar-width);
+    opacity: 1;
+}
+
+body.gamma-monocromo .btn-accion,
+body.gamma-monocromo .card-contenido {
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-soft);
+    /* Esto genera el resplandor blanco */
+}
+
+/* Botón activo del Nav (Negro con borde y texto blanco) */
+body.gamma-monocromo #mainNav button.activo {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+    border: 2px solid #ffffff;
+    box-shadow: var(--shadow-soft);
+}
+
+.contenedor-cartas-principales {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.card-accion {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 200px;
+}
+
+.btn-accion {
+    cursor: pointer;
+    background: var(--accent);
+    color: white;
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+.btn-accion:hover {
+    filter: brightness(1.2);
+}
+
+.oculto-display {
+    display: none;
+}
+
+/* Contenedor de la revisión (Lado a lado) */
+.revision-container {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    /* Izquierda más pequeña que la derecha */
+    gap: 30px;
+    align-items: center;
+    margin-top: 20px;
+}
+
+.dato-item {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-soft);
+    font-size: 1.1rem;
+}
+
+.dato-item.total {
+    border-bottom: none;
+    font-size: 1.4rem;
+    color: var(--accent);
+    margin-top: 10px;
+}
+
+.grafica-col {
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 8px;
+    height: 250px;
+    /* Altura controlada para la gráfica */
+}
+
+#resultadoEscaneo {
+    animation: aparecer 0.5s ease-out;
+}
+
+@keyframes aparecer {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card-proyecto {
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 2px solid transparent;
+}
+
+.card-proyecto:hover {
+    transform: translateY(-5px);
+    border-color: var(--accent);
+}
+
+.icon-contenedor {
+    font-size: 3rem;
+    margin-bottom: 10px;
+}
+
+.btn-retroceder {
+    background: none;
+    border: none;
+    color: var(--accent);
+    cursor: pointer;
+    font-weight: bold;
+    padding: 0;
+    margin-top: 10px;
+}
+
+.oculto-display {
+    display: none !important;
+}
+
+#resumenGlobal canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Contenedor con altura mínima */
+.chart-box {
+    position: relative;
+    height: 350px;
+    width: 100%;
+    margin-bottom: 30px;
+}
+
+/* Cuadrícula de estadísticas globales */
+.stats-grid-global {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.stat-box {
+    background: var(--bg-surface-2);
+    padding: 15px;
+    border-radius: 10px;
+    text-align: center;
+    border: 1px solid var(--border-soft);
+}
+
+.stat-box span {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}
+
+.stat-box strong {
+    font-size: 1.2rem;
+    color: var(--accent);
+}
+
+/* Contenedores de las dos gráficas */
+.contenedor-grafica-global {
+    height: 300px;
+    width: 100%;
+    background: var(--bg-surface-2);
+    padding: 15px;
+    border-radius: var(--radius-main);
+    margin-top: 10px;
+    border: 1px solid var(--border-soft);
+}
+
+@media print {
+    * {
+        /* Esta línea obliga al navegador a imprimir fondos y colores tal cual se ven */
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+}
+
+.card-proyecto.mantenimiento {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
