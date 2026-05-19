@@ -13,6 +13,10 @@ parts/
 var/
 sdist/
 wheels/
+static/assistant/sprites/Cami.zip
+static/assistant/sprites/Cami-20260423-095440.piskel
+static/assistant/sprites/Cami1/
+static/assistant/sprites/Cami2/
 *.so
 
 # Entornos virtuales
@@ -47,3 +51,11 @@ logs/
 # Bases de datos locales
 *.sqlite3
 *.db
+
+# Flask
+instance/
+.webassets-cache
+flask_session/
+
+# Migraciones (si usas Flask-Migrate)
+# migrations/
