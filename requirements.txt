@@ -5,3 +5,7 @@ openpyxl
 numpy
 scipy
 gunicorn
+pytesseract
+pdf2image
+httpx
+python-dotenv

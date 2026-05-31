@@ -1,61 +1,43 @@
 // ─────────────────────────────────────────
 //  CONFIGURACIÓN
 // ─────────────────────────────────────────
-const SPRITE_BASE = "/static/assistant/sprites/Carmilla/";
-
-timer_redux: (null, clearTimeout(estado.timer_redux));
-estado.timer_redux = null;
+const SPRITE_BASE = "/sprites/";
+let spriteActual = "";
 
 const VELOCIDADES = {
-  icono: 250, // ms — parpadeo icono dormido
-  despertando: 500, // ms — 2fps al despertar
-  sorpresa: 150, // ms — reacción brusca
-  idle: 500, // ms — 2fps idle normal
+  icono: 250,
+  despertando: 500,
+  sorpresa: 150,
+  idle: 500,
 };
 
 const TAMANIOS = {
-  icono: 48, // px — ajusta durante pruebas
-  redux: 96, // px — al despertar
-  completo: 192, // px — idle normal
+  icono: 48,
+  redux: 96,
+  completo: 192,
 };
-
-const MODO_MIRADA = "raton"; // "raton" | "alrededor"
-
-const ZONA_ARRIBA = 0.33; // primer tercio de pantalla
-const ZONA_ABAJO = 0.66; // último tercio de pantalla
 
 // ─────────────────────────────────────────
 //  MAPA DE ANIMACIONES
 // ─────────────────────────────────────────
 const ANIMACIONES = {
-  // ── IDLE COMPLETO
   idle_frente: ["Carmilla00.png", "Carmilla01.png"],
   idle_arriba: ["Carmilla02.png", "Carmilla03.png"],
   idle_derecha: ["Carmilla04.png", "Carmilla05.png"],
   idle_abajo: ["Carmilla06.png", "Carmilla07.png"],
-
-  // ── PARPADEO
   parpadeo_frente: ["Carmilla08.png", "Carmilla09.png"],
   parpadeo_arriba: ["Carmilla10.png", "Carmilla11.png"],
   parpadeo_derecha: ["Carmilla12.png", "Carmilla13.png"],
   parpadeo_abajo: ["Carmilla14.png", "Carmilla15.png"],
-
-  // ── SORPRESA
   sorpresa_exaltada: ["Carmilla16.png", "Carmilla17.png"],
   sorpresa_cerrado: ["Carmilla18.png", "Carmilla19.png"],
   sorpresa_calma: ["Carmilla20.png", "Carmilla21.png"],
-
-  // ── EXPRESIONES
   sonriendo: ["Carmilla22.png", "Carmilla23.png"],
   llanto: ["Carmilla24.png", "Carmilla25.png"],
-
-  // ── REDUX
   redux_frente: ["Carmilla26.png", "Carmilla27.png"],
   redux_arriba: ["Carmilla28.png", "Carmilla29.png"],
   redux_derecha: ["Carmilla30.png", "Carmilla31.png"],
   redux_abajo: ["Carmilla32.png", "Carmilla33.png"],
-
-  // ── ICONOS
   icono_inactivo: ["Carmilla34.png", "Carmilla35.png"],
   icono_chat: ["Carmilla36.png", "Carmilla37.png"],
   icono_activo: ["Carmilla38.png", "Carmilla39.png"],
@@ -65,106 +47,77 @@ const ANIMACIONES = {
 //  ESTADO GLOBAL
 // ─────────────────────────────────────────
 const estado = {
-  modo: "dormida", // dormida | despertando | idle | sorpresa | hablando
+  modo: "dormida",
   desde_inactividad: false,
   mirando_derecha: true,
-  vista_actual: "frente", // frente | arriba | derecha | abajo
+  vista_actual: "frente",
   parpadeando: false,
   timer_anim: null,
   timer_parpadeo: null,
   timer_despertar: null,
+  timer_redux: null,
   mouse_x: 0,
   mouse_y: 0,
-  pos_x: 0,
-  pos_y: 0,
 };
 
 // ─────────────────────────────────────────
-//  CACHE Y PROCESADOR DE COLOR
+//  CACHE Y COLOR
 // ─────────────────────────────────────────
 const spriteCache = {};
 
+function rgbAHex(rgb) {
+  const p = rgb.match(/\d+/g);
+  return (
+    (+p[0]).toString(16).padStart(2, "0") +
+    (+p[1]).toString(16).padStart(2, "0") +
+    (+p[2]).toString(16).padStart(2, "0")
+  );
+}
+
 function cargarSprite(nombre, callback) {
-  if (spriteCache[nombre]) {
-    callback(spriteCache[nombre]);
+  spriteActual = nombre;
+
+  const style = getComputedStyle(document.documentElement);
+  let accent = style.getPropertyValue("--accent").trim().replace("#", "");
+  let fill = style.getPropertyValue("--bg-nav").trim().replace("#", "");
+
+  if (accent.startsWith("rgb")) accent = rgbAHex(accent);
+  if (fill.startsWith("rgb")) fill = rgbAHex(fill);
+
+  const clave = `${nombre}_${accent}_${fill}`;
+
+  if (spriteCache[clave]) {
+    callback(spriteCache[clave]);
     return;
   }
 
-  const img = new Image();
-  img.crossOrigin = "anonymous";
-  img.src = SPRITE_BASE + nombre;
-
-  img.onload = () => {
-    const canvas = document.createElement("canvas");
-    canvas.width = img.width;
-    canvas.height = img.height;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(img, 0, 0);
-
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
-
-    const style = getComputedStyle(document.documentElement);
-    const accent = hexARgb(style.getPropertyValue("--bg-nav").trim());
-    const fill = hexARgb(style.getPropertyValue("--accent").trim());
-
-    for (let i = 0; i < data.length; i += 4) {
-      const r = data[i],
-        g = data[i + 1],
-        b = data[i + 2];
-
-      // Verde croma → transparente
-      if (g > 150 && r < 100 && b < 100) {
-        data[i + 3] = 0;
-
-        // Blanco (outline) → accent de la gamma
-      } else if (r > 200 && g > 200 && b > 200) {
-        data[i] = accent.r;
-        data[i + 1] = accent.g;
-        data[i + 2] = accent.b;
-
-        // Negro (fill) → color nav de la gamma
-      } else if (r < 50 && g < 50 && b < 50) {
-        data[i] = fill.r;
-        data[i + 1] = fill.g;
-        data[i + 2] = fill.b;
-      }
-    }
-
-    ctx.putImageData(imageData, 0, 0);
-    const url = canvas.toDataURL("image/png");
-    spriteCache[nombre] = url;
-    callback(url);
-  };
-
-  img.onerror = () => {
-    // Si no existe el sprite no rompe todo
-    console.warn(`Sprite no encontrado: ${nombre}`);
-  };
-}
-
-function hexARgb(color) {
-  if (color.startsWith("rgb")) {
-    const p = color.match(/\d+/g);
-    return { r: +p[0], g: +p[1], b: +p[2] };
-  }
-  const hex = color.replace("#", "");
-  return {
-    r: parseInt(hex.substring(0, 2), 16),
-    g: parseInt(hex.substring(2, 4), 16),
-    b: parseInt(hex.substring(4, 6), 16),
-  };
+  const url = `/sprites/${nombre}?accent=${accent}&fill=${fill}`;
+  spriteCache[clave] = url;
+  callback(url);
 }
 
 function refrescarColores() {
   Object.keys(spriteCache).forEach((k) => delete spriteCache[k]);
 }
 
+function refrescarColoresSprite() {
+  refrescarColores();
+
+  setTimeout(() => {
+    const sprite = document.getElementById("carmilla-sprite");
+    if (!sprite || estado.modo === "dormida") return;
+    if (spriteActual) {
+      cargarSprite(spriteActual, (url) => {
+        sprite.src = url;
+      });
+    }
+  }, 50);
+}
+
 // ─────────────────────────────────────────
 //  CREAR ELEMENTOS EN EL DOM
 // ─────────────────────────────────────────
 function iniciarAsistente() {
-  // ── Contenedor principal
   const contenedor = document.createElement("div");
   contenedor.id = "carmilla";
   contenedor.style.cssText = `
@@ -177,7 +130,6 @@ function iniciarAsistente() {
         user-select: none;
     `;
 
-  // ── Sprite
   const sprite = document.createElement("img");
   sprite.id = "carmilla-sprite";
   sprite.style.cssText = `
@@ -191,18 +143,16 @@ function iniciarAsistente() {
   contenedor.appendChild(sprite);
   document.body.appendChild(contenedor);
 
-  // ── Eventos
   contenedor.addEventListener("click", alClickear);
   contenedor.addEventListener("mouseenter", alHover);
   contenedor.addEventListener("mouseleave", alSalirHover);
   document.addEventListener("mousemove", rastrearMouse);
 
-  // ── Arrancar icono
   animarIcono("icono_inactivo");
 }
 
 // ─────────────────────────────────────────
-//  ANIMACIÓN DE ICONO
+//  ICONO DORMIDA
 // ─────────────────────────────────────────
 function animarIcono(tipo) {
   limpiarTimers();
@@ -248,8 +198,6 @@ function alClickear() {
       }
       break;
     case "idle":
-      abrirChat();
-      break;
     case "hablando":
       abrirChat();
       break;
@@ -268,7 +216,6 @@ function despertar() {
   sprite.style.width = TAMANIOS.redux + "px";
   sprite.style.height = TAMANIOS.redux + "px";
 
-  // Secuencia de despertar — mayormente ojos cerrados
   const secuencia = [
     "redux_frente",
     "redux_frente",
@@ -284,22 +231,6 @@ function despertar() {
     "redux_frente",
   ];
 
-  // Parpadeos intercalados — 70% cerrado, 30% abierto
-  const conParpadeo = [
-    true,
-    false,
-    true,
-    true,
-    false,
-    true,
-    false,
-    true,
-    true,
-    false,
-    true,
-    false,
-  ];
-
   let paso = 0;
   let frame = 0;
   let mirando = true;
@@ -308,26 +239,17 @@ function despertar() {
     if (estado.modo !== "despertando") return;
 
     const base = secuencia[paso];
-    // Elige entre abierto o cerrado según secuencia de parpadeo
-    const tipo = conParpadeo[paso]
-      ? base.replace("redux_", "redux_") // ojos abiertos (redux)
-      : base.replace("redux_", "redux_"); // mismo — ver nota abajo*
-
     const nombre = ANIMACIONES[base][frame % 2];
     cargarSprite(nombre, (url) => {
       sprite.src = url;
     });
 
-    // Voltear en arriba/abajo también si venía de izquierda
     if (base === "redux_derecha") {
       aplicarFlip(sprite, mirando);
-    } else {
-      // Para arriba/abajo/frente mantiene el último flip
     }
 
     frame++;
     if (frame % 3 === 0) {
-      // Cambiar vista ocasionalmente y voltear
       if (base === "redux_derecha" && frame % 6 === 0) {
         mirando = !mirando;
       }
@@ -335,7 +257,6 @@ function despertar() {
     }
   }, VELOCIDADES.despertando);
 
-  // Después de 15s pasa a idle
   estado.timer_despertar = setTimeout(() => {
     if (estado.modo === "despertando") pasarAIdle();
   }, 15000);
@@ -354,7 +275,6 @@ function asustarse() {
   sprite.style.width = TAMANIOS.completo + "px";
   sprite.style.height = TAMANIOS.completo + "px";
 
-  // Saltar al lado opuesto
   const estaADerecha = contenedor.style.left === "";
   if (estaADerecha) {
     contenedor.style.right = "";
@@ -368,7 +288,6 @@ function asustarse() {
     estado.mirando_derecha = true;
   }
 
-  // Secuencia sorpresa: exaltada → cerrado → calma
   const secSorpresa = [
     ...Array(4).fill("sorpresa_exaltada"),
     ...Array(3).fill("sorpresa_cerrado"),
@@ -388,7 +307,6 @@ function asustarse() {
     if (frame % 2 === 0) paso++;
   }, VELOCIDADES.sorpresa);
 
-  // Después de 3s se calma
   setTimeout(() => {
     limpiarTimers();
     pasarAIdle();
@@ -410,7 +328,6 @@ function pasarAIdle() {
   programarParpadeo();
   programarMovimiento();
 
-  // ── Volver a redux después de 20s sin interacción
   estado.timer_redux = setTimeout(() => {
     if (estado.modo === "idle") volverARedux();
   }, 20000);
@@ -419,22 +336,23 @@ function pasarAIdle() {
 function volverARedux() {
   limpiarTimers();
   clearInterval(MOVIMIENTO.timer);
-  estado.modo = "despertando"; // reutiliza la lógica de redux
+  estado.modo = "despertando";
   estado.desde_inactividad = true;
 
   const sprite = document.getElementById("carmilla-sprite");
   sprite.style.width = TAMANIOS.redux + "px";
   sprite.style.height = TAMANIOS.redux + "px";
 
-  // Reiniciar timer de despertar
   estado.timer_despertar = setTimeout(() => {
     pasarAIdle();
   }, 15000);
 }
 
+// ─────────────────────────────────────────
+//  MIRADA
+// ─────────────────────────────────────────
 function iniciarMirada() {
   limpiarTimer("timer_anim");
-
   estado.timer_anim = setInterval(() => {
     if (estado.modo !== "idle") return;
     actualizarMirada();
@@ -449,29 +367,22 @@ function actualizarMirada() {
   const centroX = rect.left + rect.width / 2;
   const centroY = rect.top + rect.height / 2;
 
-  // ── Eje X → flip
   const ratonADerecha = estado.mouse_x > centroX;
   if (ratonADerecha !== estado.mirando_derecha) {
     estado.mirando_derecha = ratonADerecha;
     aplicarFlip(sprite, estado.mirando_derecha);
   }
 
-  // ── Eje Y → relativo a Carmilla, no a la pantalla
   const diffY = estado.mouse_y - centroY;
-  const umbral = rect.height * 0.8; // margen para zona "derecha"
+  const umbral = rect.height * 0.8;
 
   let vista;
-  if (diffY < -umbral) {
-    vista = "arriba";
-  } else if (diffY > umbral) {
-    vista = "abajo";
-  } else {
-    vista = "derecha";
-  }
+  if (diffY < -umbral) vista = "arriba";
+  else if (diffY > umbral) vista = "abajo";
+  else vista = "derecha";
 
   estado.vista_actual = vista;
 
-  // ── Elegir sprite
   const prefijo = estado.parpadeando ? "parpadeo_" : "idle_";
   const nombre = ANIMACIONES[prefijo + vista];
 
@@ -488,19 +399,14 @@ function actualizarMirada() {
 // ─────────────────────────────────────────
 function programarParpadeo() {
   limpiarTimer("timer_parpadeo");
-
-  // Parpadea cada 3-6 segundos aleatoriamente
   const espera = 3000 + Math.random() * 3000;
 
   estado.timer_parpadeo = setTimeout(() => {
     if (estado.modo !== "idle") return;
-
     estado.parpadeando = true;
-
-    // Duración del parpadeo — 2 frames a 2fps = 1 segundo
     setTimeout(() => {
       estado.parpadeando = false;
-      programarParpadeo(); // programar el siguiente
+      programarParpadeo();
     }, 1000);
   }, espera);
 }
@@ -511,6 +417,15 @@ function programarParpadeo() {
 function rastrearMouse(e) {
   estado.mouse_x = e.clientX;
   estado.mouse_y = e.clientY;
+  reiniciarTimerInactividad();
+}
+
+function reiniciarTimerInactividad() {
+  if (estado.modo !== "idle") return;
+  clearTimeout(estado.timer_redux);
+  estado.timer_redux = setTimeout(() => {
+    if (estado.modo === "idle") volverARedux();
+  }, 20000);
 }
 
 // ─────────────────────────────────────────
@@ -521,61 +436,18 @@ function aplicarFlip(sprite, mirando_derecha) {
 }
 
 // ─────────────────────────────────────────
-//  ICONO CHAT
-// ─────────────────────────────────────────
-function actualizarIconoChat() {
-  // Placeholder — se implementa en Capa 2
-  // El icono shine cambia a icono_chat cuando Carmilla está despierta
-}
-
-function abrirChat() {
-  // Placeholder — Capa 2
-  console.log("Chat pendiente — Capa 2");
-}
-
-// ─────────────────────────────────────────
-//  LIMPIAR TIMERS
-// ─────────────────────────────────────────
-function limpiarTimers() {
-  clearInterval(estado.timer_anim);
-  clearTimeout(estado.timer_despertar);
-  clearTimeout(estado.timer_parpadeo);
-  estado.timer_anim = null;
-  estado.timer_despertar = null;
-  estado.timer_parpadeo = null;
-}
-
-function limpiarTimer(nombre) {
-  if (estado[nombre]) {
-    clearInterval(estado[nombre]);
-    clearTimeout(estado[nombre]);
-    estado[nombre] = null;
-  }
-}
-
-// ─────────────────────────────────────────
-//  REFRESCAR COLORES AL CAMBIAR GAMMA
-// ─────────────────────────────────────────
-function refrescarColoresSprite() {
-  refrescarColores();
-}
-
-// ─────────────────────────────────────────
 //  MOVIMIENTO AUTÓNOMO
 // ─────────────────────────────────────────
 const MOVIMIENTO = {
   activo: false,
-  direccion: 1, // 1 = derecha, -1 = izquierda
-  velocidad: 2, // px por tick
+  direccion: 1,
+  velocidad: 2,
   timer: null,
   timer_inicio: null,
-  timer_redux: null,
 };
 
 function programarMovimiento() {
-  // Cada 8-15 segundos decide si moverse
   const espera = 8000 + Math.random() * 7000;
-
   MOVIMIENTO.timer_inicio = setTimeout(() => {
     if (estado.modo !== "idle") {
       programarMovimiento();
@@ -589,17 +461,22 @@ function iniciarMovimiento() {
   MOVIMIENTO.activo = true;
   MOVIMIENTO.direccion = Math.random() > 0.5 ? 1 : -1;
 
-  const contenedor = document.getElementById("carmilla");
-  const rect = contenedor.getBoundingClientRect();
+  limpiarTimer("timer_anim");
 
-  // Forzar mirada hacia donde va
+  const sprite = document.getElementById("carmilla-sprite");
   estado.mirando_derecha = MOVIMIENTO.direccion === 1;
-  aplicarFlip(
-    document.getElementById("carmilla-sprite"),
-    estado.mirando_derecha,
-  );
+  aplicarFlip(sprite, estado.mirando_derecha);
 
-  // Duración del movimiento — 3 a 6 segundos
+  let frame = 0;
+  estado.timer_anim = setInterval(() => {
+    const sp = document.getElementById("carmilla-sprite");
+    const nombre = ANIMACIONES["idle_derecha"][frame % 2];
+    cargarSprite(nombre, (url) => {
+      sp.src = url;
+    });
+    frame++;
+  }, VELOCIDADES.idle);
+
   const duracion = 3000 + Math.random() * 3000;
 
   MOVIMIENTO.timer = setInterval(() => {
@@ -612,7 +489,6 @@ function iniciarMovimiento() {
     const rect = contenedor.getBoundingClientRect();
     const margen = 20;
 
-    // Rebotar en los bordes
     if (rect.left <= margen && MOVIMIENTO.direccion === -1) {
       MOVIMIENTO.direccion = 1;
       estado.mirando_derecha = true;
@@ -627,11 +503,10 @@ function iniciarMovimiento() {
       aplicarFlip(document.getElementById("carmilla-sprite"), false);
     }
 
-    // Mover
     const nuevaX = rect.left + MOVIMIENTO.direccion * MOVIMIENTO.velocidad;
     contenedor.style.left = nuevaX + "px";
     contenedor.style.right = "auto";
-  }, 16); // ~60fps para movimiento suave
+  }, 16);
 
   setTimeout(() => detenerMovimiento(), duracion);
 }
@@ -640,7 +515,42 @@ function detenerMovimiento() {
   MOVIMIENTO.activo = false;
   clearInterval(MOVIMIENTO.timer);
   MOVIMIENTO.timer = null;
-  programarMovimiento(); // programar el siguiente
+  iniciarMirada();
+  programarMovimiento();
+}
+
+// ─────────────────────────────────────────
+//  CHAT (Capa 2 — placeholder)
+// ─────────────────────────────────────────
+function actualizarIconoChat() {
+  // Capa 2
+}
+
+function abrirChat() {
+  // Capa 2
+  console.log("Chat pendiente — Capa 2");
+}
+
+// ─────────────────────────────────────────
+//  LIMPIAR TIMERS
+// ─────────────────────────────────────────
+function limpiarTimers() {
+  clearInterval(estado.timer_anim);
+  clearTimeout(estado.timer_despertar);
+  clearTimeout(estado.timer_parpadeo);
+  clearTimeout(estado.timer_redux);
+  estado.timer_anim = null;
+  estado.timer_despertar = null;
+  estado.timer_parpadeo = null;
+  estado.timer_redux = null;
+}
+
+function limpiarTimer(nombre) {
+  if (estado[nombre]) {
+    clearInterval(estado[nombre]);
+    clearTimeout(estado[nombre]);
+    estado[nombre] = null;
+  }
 }
 
 // ─────────────────────────────────────────

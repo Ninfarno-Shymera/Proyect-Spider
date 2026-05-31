@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────
 //  CONFIGURACIÓN — solo cambia esto
 // ─────────────────────────────────────────
-const TEMA_BASE = "violeta";
+const TEMA_BASE = "aqua";
 
 // ─────────────────────────────────────────
 //  LISTA DE TEMAS DISPONIBLES
@@ -103,4 +103,16 @@ window.onload = () => {
   actualizarSimbolo();
   setGamma(TEMA_BASE);
   mostrarContenido("inicio");
+
+  document.addEventListener("click", () => {
+    if (typeof reiniciarTimerInactividad === "function") {
+      reiniciarTimerInactividad();
+    }
+  });
+
+  setTimeout(() => {
+    if (typeof refrescarColoresSprite === "function") {
+      refrescarColoresSprite();
+    }
+  }, 100);
 };
