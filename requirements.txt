@@ -9,3 +9,4 @@ pytesseract
 pdf2image
 httpx
 python-dotenv
+Pillow

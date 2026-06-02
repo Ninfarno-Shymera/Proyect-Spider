@@ -48,6 +48,17 @@ const VISTAS = {
 
             </div>
 
+            <div class="bloque-blanco card-proyecto"
+                 onclick="mostrarSubProyecto('curp')">
+
+                <div class="icon-contenedor">🪪</div>
+
+                <h3>Registro CURP</h3>
+
+                <p>Validación y registro de personas mediante documento oficial de CURP.</p>
+
+            </div>
+
         </div>
     `,
 
@@ -329,5 +340,149 @@ const VISTAS = {
 
         </div>
 
+    `,
+
+  proyecto_curp: `
+
+        <div class="bloque-blanco">
+            <h2>🪪 Registro de Personas — CURP</h2>
+            <button class="btn-retroceder" onclick="mostrarContenido('proyectos')">
+                ← Volver a Proyectos
+            </button>
+        </div>
+
+        <!-- ETAPA 1: FORMULARIO -->
+        <div id="etapa-formulario" class="bloque-blanco">
+            <h3>Registro de datos</h3>
+            <p style="color:var(--text-secondary);font-size:0.9rem;">
+                Ingresa tus datos. El PDF de CURP se solicitará en el siguiente paso.
+            </p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-top:15px;">
+                <div style="grid-column:1/-1;">
+                    <label style="font-size:0.85rem;color:var(--text-secondary);">CURP</label>
+                    <input type="text" id="curp-input" maxlength="18" placeholder="18 caracteres"
+                        style="width:100%;margin-top:4px;padding:9px 12px;border:1px solid var(--border);
+                        border-radius:8px;background:var(--bg-surface-2);color:var(--text-main);
+                        font-size:1rem;font-family:monospace;letter-spacing:2px;text-transform:uppercase;">
+                </div>
+                <div>
+                    <label style="font-size:0.85rem;color:var(--text-secondary);">Nombre(s)</label>
+                    <input type="text" id="curp-nombre" placeholder="Nombre(s)"
+                        style="width:100%;margin-top:4px;padding:9px 12px;border:1px solid var(--border);
+                        border-radius:8px;background:var(--bg-surface-2);color:var(--text-main);font-size:0.95rem;">
+                </div>
+                <div>
+                    <label style="font-size:0.85rem;color:var(--text-secondary);">Apellido Paterno</label>
+                    <input type="text" id="curp-ap" placeholder="Apellido Paterno"
+                        style="width:100%;margin-top:4px;padding:9px 12px;border:1px solid var(--border);
+                        border-radius:8px;background:var(--bg-surface-2);color:var(--text-main);font-size:0.95rem;">
+                </div>
+                <div>
+                    <label style="font-size:0.85rem;color:var(--text-secondary);">Apellido Materno</label>
+                    <input type="text" id="curp-am" placeholder="Apellido Materno"
+                        style="width:100%;margin-top:4px;padding:9px 12px;border:1px solid var(--border);
+                        border-radius:8px;background:var(--bg-surface-2);color:var(--text-main);font-size:0.95rem;">
+                </div>
+                <div>
+                    <label style="font-size:0.85rem;color:var(--text-secondary);">Edad</label>
+                    <input type="number" id="curp-edad" placeholder="Edad" min="0" max="120"
+                        style="width:100%;margin-top:4px;padding:9px 12px;border:1px solid var(--border);
+                        border-radius:8px;background:var(--bg-surface-2);color:var(--text-main);font-size:0.95rem;">
+                </div>
+            </div>
+            <p id="curp-form-feedback" style="margin-top:10px;font-size:0.9rem;min-height:1.2em;"></p>
+            <div style="text-align:right;margin-top:10px;">
+                <button id="btnGuardarDatos" class="btn-accion">💾 Guardar datos</button>
+            </div>
+        </div>
+
+        <!-- ETAPA 2: SUBIR PDF -->
+        <div id="etapa-pdf" class="bloque-blanco oculto-display">
+            <h3>Documento PDF de CURP</h3>
+            <p id="curp-saludo" style="color:var(--text-secondary);font-size:0.95rem;"></p>
+            <input type="hidden" id="pdf-curp-hidden">
+            <div style="margin-top:20px;">
+                <label for="curp-pdf-input" class="btn-accion" style="display:inline-block;cursor:pointer;">
+                    📎 Seleccionar PDF
+                </label>
+                <span id="curp-pdf-nombre" style="margin-left:12px;font-size:0.85rem;color:var(--text-secondary);">
+                    Sin archivo seleccionado
+                </span>
+                <input type="file" id="curp-pdf-input" accept=".pdf" style="display:none;">
+            </div>
+            <p id="pdf-feedback" style="margin-top:10px;font-size:0.9rem;min-height:1.2em;"></p>
+            <div style="text-align:right;margin-top:15px;">
+                <button id="btnSubirPdf" class="btn-accion">🔍 Validar documento</button>
+            </div>
+        </div>
+
+        <!-- ETAPA 3: VALIDANDO -->
+        <div id="etapa-validando" class="bloque-blanco oculto-display" style="text-align:center;padding:40px;">
+            <p style="font-size:1.1rem;color:var(--text-secondary);">⏳ Analizando documento con IA...</p>
+        </div>
+
+        <!-- ETAPA 4: RESULTADO -->
+        <div id="etapa-resultado" class="bloque-blanco oculto-display">
+            <h3>Datos registrados</h3>
+            <p id="res-metodo" style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:15px;"></p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div class="dato-item" style="grid-column:1/-1;">
+                    <strong>CURP:</strong>
+                    <span id="res-curp" style="font-family:monospace;"></span>
+                </div>
+                <div class="dato-item">
+                    <strong>Nombre(s):</strong>
+                    <span id="res-nombre"></span>
+                </div>
+                <div class="dato-item">
+                    <strong>Apellido Paterno:</strong>
+                    <span id="res-ap"></span>
+                </div>
+                <div class="dato-item">
+                    <strong>Apellido Materno:</strong>
+                    <span id="res-am"></span>
+                </div>
+                <div class="dato-item">
+                    <strong>Edad:</strong>
+                    <span id="res-edad"></span>
+                </div>
+                <div class="dato-item">
+                    <strong>Fecha Nacimiento:</strong>
+                    <span id="res-fecha"></span>
+                </div>
+                <div class="dato-item">
+                    <strong>Sexo:</strong>
+                    <span id="res-sexo"></span>
+                </div>
+                <div class="dato-item">
+                    <strong>Estado:</strong>
+                    <span id="res-estado"></span>
+                </div>
+            </div>
+            <div style="margin-top:20px;padding-top:15px;border-top:1px solid var(--border-soft);">
+                <a id="res-pdf-link" href="#" target="_blank"
+                    style="color:var(--accent);font-weight:bold;text-decoration:none;display:none;"></a>
+            </div>
+            <div id="pdf-edicion-wrap" style="display:none;margin-top:15px;">
+                <label style="font-size:0.85rem;color:var(--text-secondary);">
+                    Nuevo PDF (opcional — deja vacío para conservar el actual)
+                </label>
+                <div style="margin-top:6px;">
+                    <label for="curp-pdf-edicion" class="btn-accion"
+                        style="display:inline-block;cursor:pointer;font-size:0.85rem;">
+                        📎 Seleccionar PDF
+                    </label>
+                    <span id="curp-pdf-edicion-nombre"
+                        style="margin-left:10px;font-size:0.82rem;color:var(--text-secondary);">
+                        Sin archivo
+                    </span>
+                    <input type="file" id="curp-pdf-edicion" accept=".pdf" style="display:none;">
+                </div>
+            </div>
+            <div style="text-align:right;margin-top:20px;display:flex;gap:10px;justify-content:flex-end;">
+                <button id="btnEditarDatos" class="btn-accion">✏️ Editar datos</button>
+                <button id="btnGuardarEdicion" class="btn-accion" style="display:none;">💾 Guardar cambios</button>
+            </div>
+        </div>
     `,
 };

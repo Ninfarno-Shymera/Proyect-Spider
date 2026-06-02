@@ -1,14 +1,26 @@
-from flask import Flask, render_template, request, jsonify
 import pdfplumber
 import numpy as np
-from scipy import stats
 import pandas as pd
 import os
+import io
 
+from flask import abort, Flask, jsonify, render_template, request, send_file
+from scipy import stats
+from PIL import Image
 from services.ocr import extraer_texto_pdf
 from services.mincuad import calcular_minimos_cuadrados
 from services.cfe import extraer_datos_cfe, guardar_en_excel, EXCEL_FILE
-from services.curp import registrar_persona, buscar_curp, validar_formato_curp
+from services.curp import (
+    registrar_datos,
+    procesar_pdf_curp,
+    validar_con_ia,
+    guardar_resultado_pdf,
+    editar_datos,
+    buscar_curp,
+    validar_formato_curp,
+    obtener_pdf_valido,
+)
+from services.sprites import recolorear_sprite
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 
@@ -19,6 +31,41 @@ app = Flask(__name__, static_folder="static", template_folder="templates")
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+# ─────────────────────────────────────────
+#  SPRITES — Endpoint de recoloreo
+# ─────────────────────────────────────────
+@app.route("/sprites/<nombre>")
+def servir_sprite(nombre):
+    import re as _re
+
+    if not _re.match(r"^[\w\-]+\.png$", nombre, _re.IGNORECASE):
+        abort(400)
+
+    ruta = os.path.join("static", "assistant", "sprites", "Carmilla", nombre)
+    if not os.path.exists(ruta):
+        abort(404)
+
+    accent = request.args.get("accent", "0a9396")
+    fill = request.args.get("fill", "e9ecef")
+
+    try:
+        with open(ruta, "rb") as f:
+            png_bytes = f.read()
+
+        png_modificado = recolorear_sprite(png_bytes, accent, fill)
+
+        return send_file(
+            io.BytesIO(png_modificado),
+            mimetype="image/png",
+            max_age=0,
+        )
+    except ValueError:
+        abort(400)
+    except Exception as e:
+        app.logger.error(f"Error procesando sprite {nombre}: {e}")
+        abort(500)
 
 
 # ─────────────────────────────────────────
@@ -207,37 +254,7 @@ def minimos_cuadrados():
 
 
 # ─────────────────────────────────────────
-#  CURP — Verificar si ya existe
-# ─────────────────────────────────────────
-@app.route("/curp/verificar", methods=["POST"])
-def curp_verificar():
-    """
-    Recibe { "curp": "..." } y devuelve si ya existe en la base.
-    El frontend lo llama antes de mostrar el formulario completo.
-    """
-    try:
-        body = request.get_json(force=True)
-        curp = body.get("curp", "").strip().upper()
-
-        if not curp:
-            return jsonify({"status": "Error", "msg": "CURP vacía"}), 400
-
-        if not validar_formato_curp(curp):
-            return jsonify({"status": "Error", "msg": "Formato de CURP inválido"}), 400
-
-        existente = buscar_curp(curp)
-        if existente:
-            # Devolvemos los datos actuales para mostrarlos en el modal
-            return jsonify({"status": "Existe", "datos": existente})
-
-        return jsonify({"status": "Libre"})
-
-    except Exception as e:
-        return jsonify({"status": "Error", "msg": str(e)}), 500
-
-
-# ─────────────────────────────────────────
-#  CURP — Registrar / Actualizar
+#  CURP — Paso 1: Registrar datos básicos
 # ─────────────────────────────────────────
 @app.route("/curp/registrar", methods=["POST"])
 def curp_registrar():
@@ -249,19 +266,100 @@ def curp_registrar():
             "edad": request.form.get("edad", "").strip(),
             "curp": request.form.get("curp", "").strip().upper(),
         }
-        modo = request.form.get("modo", "nuevo")
+        resultado = registrar_datos(datos_form)
+        return jsonify(resultado)
+    except Exception as e:
+        return jsonify({"status": "Error", "msg": str(e)}), 500
 
+
+# ─────────────────────────────────────────
+#  CURP — Paso 2+3+4: Subir y validar PDF
+# ─────────────────────────────────────────
+@app.route("/curp/validar_pdf", methods=["POST"])
+def curp_validar_pdf():
+    try:
+        curp = request.form.get("curp", "").strip().upper()
         pdf_file = request.files.get("pdf")
+
+        if not curp:
+            return jsonify({"status": "Error", "msg": "CURP requerida"}), 400
         if not pdf_file:
-            return jsonify({"status": "Error", "msg": "No se recibió el PDF"}), 400
+            return jsonify({"status": "Error", "msg": "PDF requerido"}), 400
 
         pdf_bytes = pdf_file.read()
 
-        resultado = registrar_persona(datos_form, pdf_bytes, modo=modo)
+        # Paso 2 — leer PDF
+        lectura = procesar_pdf_curp(curp, pdf_bytes)
+        if lectura["status"] != "Éxito":
+            return jsonify(lectura)
+
+        # Paso 3 — validar con IA
+        ia = validar_con_ia(pdf_bytes, lectura["texto"], lectura["metodo"])
+
+        # Paso 4 — guardar resultado
+        resultado = guardar_resultado_pdf(curp, pdf_bytes, ia, lectura["metodo"])
         return jsonify(resultado)
 
     except Exception as e:
         return jsonify({"status": "Error", "msg": str(e)}), 500
+
+
+# ─────────────────────────────────────────
+#  CURP — Verificar si ya existe
+# ─────────────────────────────────────────
+@app.route("/curp/verificar", methods=["POST"])
+def curp_verificar():
+    try:
+        body = request.get_json(force=True)
+        curp = body.get("curp", "").strip().upper()
+
+        if not curp:
+            return jsonify({"status": "Error", "msg": "CURP vacía"}), 400
+        if not validar_formato_curp(curp):
+            return jsonify({"status": "Error", "msg": "Formato de CURP inválido"}), 400
+
+        existente = buscar_curp(curp)
+        if existente:
+            return jsonify({"status": "Existe", "datos": existente})
+
+        return jsonify({"status": "Libre"})
+
+    except Exception as e:
+        return jsonify({"status": "Error", "msg": str(e)}), 500
+
+
+# ─────────────────────────────────────────
+#  CURP — Editar datos
+# ─────────────────────────────────────────
+@app.route("/curp/editar", methods=["POST"])
+def curp_editar():
+    try:
+        datos_nuevos = {
+            "nombre": request.form.get("nombre", "").strip(),
+            "apellido_paterno": request.form.get("apellido_paterno", "").strip(),
+            "apellido_materno": request.form.get("apellido_materno", "").strip(),
+            "edad": request.form.get("edad", "").strip(),
+        }
+        curp = request.form.get("curp", "").strip().upper()
+        resultado = editar_datos(curp, datos_nuevos)
+        return jsonify(resultado)
+    except Exception as e:
+        return jsonify({"status": "Error", "msg": str(e)}), 500
+
+
+# ─────────────────────────────────────────
+#  CURP — Servir PDF guardado
+# ─────────────────────────────────────────
+@app.route("/curp/pdf/<curp>")
+def curp_ver_pdf(curp):
+    try:
+        ruta = obtener_pdf_valido(curp.upper())
+        if not ruta:
+            abort(404)
+        return send_file(ruta, mimetype="application/pdf")
+    except Exception as e:
+        app.logger.error(f"Error sirviendo PDF de CURP: {e}")
+        abort(500)
 
 
 # ─────────────────────────────────────────

@@ -68,9 +68,13 @@ function setGamma(tema, boton) {
     .forEach((b) => b.classList.remove("activo"));
   if (boton) boton.classList.add("activo");
 
-  if (typeof refrescarColoresSprite === "function") {
-    refrescarColoresSprite();
-  }
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      if (typeof refrescarColoresSprite === "function") {
+        refrescarColoresSprite();
+      }
+    });
+  });
 }
 
 // ─────────────────────────────────────────
@@ -94,6 +98,10 @@ function mostrarContenido(seccion, btn) {
 function mostrarSubProyecto(nombre) {
   if (nombre === "cfe") mostrarContenido("proyecto_cfe");
   if (nombre === "analisis") mostrarContenido("proyecto_rectas");
+  if (nombre === "curp") {
+    mostrarContenido("proyecto_curp");
+    requestAnimationFrame(() => iniciarModuloCurp());
+  }
 }
 
 // ─────────────────────────────────────────
@@ -109,10 +117,4 @@ window.onload = () => {
       reiniciarTimerInactividad();
     }
   });
-
-  setTimeout(() => {
-    if (typeof refrescarColoresSprite === "function") {
-      refrescarColoresSprite();
-    }
-  }, 100);
 };

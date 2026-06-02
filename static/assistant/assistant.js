@@ -5,16 +5,16 @@ const SPRITE_BASE = "/sprites/";
 let spriteActual = "";
 
 const VELOCIDADES = {
-  icono: 250,
-  despertando: 500,
+  icono: 500,
+  despertando: 400,
   sorpresa: 150,
   idle: 500,
 };
 
 const TAMANIOS = {
   icono: 48,
-  redux: 96,
-  completo: 192,
+  redux: 64,
+  completo: 128,
 };
 
 // ─────────────────────────────────────────
@@ -78,8 +78,12 @@ function cargarSprite(nombre, callback) {
   spriteActual = nombre;
 
   const style = getComputedStyle(document.documentElement);
-  let accent = style.getPropertyValue("--accent").trim().replace("#", "");
-  let fill = style.getPropertyValue("--bg-nav").trim().replace("#", "");
+
+  let accent = style
+    .getPropertyValue("--accent-active")
+    .trim()
+    .replace("#", "");
+  let fill = style.getPropertyValue("--bg-header").trim().replace("#", "");
 
   if (accent.startsWith("rgb")) accent = rgbAHex(accent);
   if (fill.startsWith("rgb")) fill = rgbAHex(fill);
