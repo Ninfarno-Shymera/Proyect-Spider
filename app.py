@@ -12,9 +12,7 @@ from services.mincuad import calcular_minimos_cuadrados
 from services.cfe import extraer_datos_cfe, guardar_en_excel, EXCEL_FILE
 from services.curp import (
     registrar_datos,
-    procesar_pdf_curp,
-    validar_con_ia,
-    guardar_resultado_pdf,
+    procesar_y_validar_pdf,
     editar_datos,
     buscar_curp,
     validar_formato_curp,
@@ -273,7 +271,7 @@ def curp_registrar():
 
 
 # ─────────────────────────────────────────
-#  CURP — Paso 2+3+4: Subir y validar PDF
+#  CURP — Paso 2+3: Subir y validar PDF
 # ─────────────────────────────────────────
 @app.route("/curp/validar_pdf", methods=["POST"])
 def curp_validar_pdf():
@@ -287,26 +285,13 @@ def curp_validar_pdf():
             return jsonify({"status": "Error", "msg": "PDF requerido"}), 400
 
         pdf_bytes = pdf_file.read()
-
-        # Paso 2 — leer PDF
-        lectura = procesar_pdf_curp(curp, pdf_bytes)
-        if lectura["status"] != "Éxito":
-            return jsonify(lectura)
-
-        # Paso 3 — validar con IA
-        ia = validar_con_ia(pdf_bytes, lectura["texto"], lectura["metodo"])
-
-        # Paso 4 — guardar resultado
-        resultado = guardar_resultado_pdf(curp, pdf_bytes, ia, lectura["metodo"])
+        resultado = procesar_y_validar_pdf(curp, pdf_bytes)
         return jsonify(resultado)
 
     except Exception as e:
         return jsonify({"status": "Error", "msg": str(e)}), 500
 
 
-# ─────────────────────────────────────────
-#  CURP — Verificar si ya existe
-# ─────────────────────────────────────────
 @app.route("/curp/verificar", methods=["POST"])
 def curp_verificar():
     try:

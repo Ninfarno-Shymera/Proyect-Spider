@@ -1,10 +1,11 @@
 import numpy as np
 import pandas as pd
 
+
 def calcular_minimos_cuadrados(file):
     df = pd.read_excel(file)
-    X = df['X'].values
-    Y = df['Y'].values
+    X = df["X"].values
+    Y = df["Y"].values
 
     X = np.vstack([X, np.ones(len(X))]).T
     XtX = np.transpose(X) @ X
@@ -15,6 +16,6 @@ def calcular_minimos_cuadrados(file):
     return {
         "m": float(beta[0]),
         "b": float(beta[1]),
-        "x": df['X'].tolist(),
-        "y": df['Y'].tolist()
+        "x": df["X"].tolist(),
+        "y": df["Y"].tolist(),
     }

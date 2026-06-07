@@ -1,44 +1,8 @@
-"""
-services/curp.py
-────────────────────────────────────────────
-Lógica de negocio para el módulo de Registro de Personas.
-
-Flujo:
-  1. Registrar datos básicos (sin PDF) → guarda en Excel
-  2. Subir PDF → OCR si es necesario → validar con IA (Gemini)
-  3. Si es válido  → guardar en curp_validos/, marcar registro como validado
-  4. Si no válido  → guardar en curp_revision/, pedir nuevo PDF
-  5. Editar datos  → conserva historial de PDFs anteriores
-
-Carpetas:
-  resource/curp/registros_personas.xlsx
-  resource/curp/curp_validos/
-  resource/curp/curp_revision/
-"""
-
 import os
 import re
-import json
-import io
-from google import genai
 import pandas as pd
 from datetime import datetime
-from dotenv import load_dotenv
 from services.ocr import extraer_texto_pdf
-
-load_dotenv()
-
-# ── API Gemini
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-_cliente_gemini = None
-
-
-def _get_cliente():
-    global _cliente_gemini
-    if not _cliente_gemini and GEMINI_API_KEY:
-        _cliente_gemini = genai.Client(api_key=GEMINI_API_KEY)
-    return _cliente_gemini
-
 
 # ── Rutas
 BASE_DIR = os.path.join("resource", "curp")
@@ -59,27 +23,27 @@ COLUMNAS = [
     "FechaNacimiento",
     "Sexo",
     "Estado",
-    "Validado",  # True / False / ""
-    "ArchivosValidados",  # lista separada por | para historial
+    "Validado",  # True / False
+    "ArchivosValidados",  # historial separado por |
     "FechaRegistro",
     "Observaciones",
 ]
 
 # ── Regex CURP oficial
 PATRON_CURP = re.compile(
-    r"^[A-Z]{1}[AEIOU]{1}[A-Z]{2}\d{2}"
+    r"[A-Z]{1}[AEIOU]{1}[A-Z]{2}\d{2}"
     r"(0[1-9]|1[0-2])"
     r"(0[1-9]|[12]\d|3[01])"
     r"[HM]{1}"
     r"(AS|BC|BS|CC|CL|CM|CS|CH|DF|DG|GT|GR|HG|JC|MC|MN|MS|NT|NL|OC|PL|QT|QR|SP|SL|SR|TC|TS|TL|VZ|YN|ZS|NE)"
     r"[B-DF-HJ-NP-TV-Z]{3}"
-    r"[A-Z\d]{1}\d{1}$",
+    r"[A-Z\d]{1}\d{1}",
     re.IGNORECASE,
 )
 
 
 def validar_formato_curp(curp: str) -> bool:
-    return bool(PATRON_CURP.match(curp.strip().upper()))
+    return bool(re.fullmatch(PATRON_CURP.pattern, curp.strip().upper(), re.IGNORECASE))
 
 
 # ─────────────────────────────────────────
@@ -104,13 +68,9 @@ def buscar_curp(curp: str) -> dict | None:
 
 
 # ─────────────────────────────────────────
-#  PASO 1 — REGISTRAR DATOS BÁSICOS (sin PDF)
+#  PASO 1 — REGISTRAR DATOS BÁSICOS
 # ─────────────────────────────────────────
 def registrar_datos(datos_form: dict) -> dict:
-    """
-    Guarda nombre, apellidos, edad y CURP en el Excel.
-    No requiere PDF todavía.
-    """
     curp = datos_form.get("curp", "").strip().upper()
 
     if not validar_formato_curp(curp):
@@ -151,180 +111,108 @@ def registrar_datos(datos_form: dict) -> dict:
 
 
 # ─────────────────────────────────────────
-#  PASO 2 — PROCESAR PDF
+#  PASO 2 — EXTRAER DATOS DEL PDF
 # ─────────────────────────────────────────
-def procesar_pdf_curp(curp: str, pdf_bytes: bytes) -> dict:
+def _extraer_datos_pdf(texto: str) -> dict:
+    datos = {
+        "fecha_nacimiento": None,
+        "sexo": None,
+        "estado": None,
+        "curp_encontrada": None,
+    }
+
+    # CURP en el texto
+    match_curp = PATRON_CURP.search(texto.upper())
+    if match_curp:
+        datos["curp_encontrada"] = match_curp.group(0).upper()
+
+    # Fecha de nacimiento (formatos: DD/MM/AAAA, DD-MM-AAAA, DDMMAAAA)
+    match_fecha = re.search(r"\b(\d{2})[/\-](\d{2})[/\-](\d{4})\b", texto)
+    if match_fecha:
+        datos["fecha_nacimiento"] = (
+            f"{match_fecha.group(1)}/{match_fecha.group(2)}/{match_fecha.group(3)}"
+        )
+
+    # Sexo
+    if re.search(r"\bHOMBRE\b|\bMASCULINO\b", texto.upper()):
+        datos["sexo"] = "H"
+    elif re.search(r"\bMUJER\b|\bFEMENINO\b", texto.upper()):
+        datos["sexo"] = "M"
+
+    # Estado (clave de 2 letras después de "ESTADO:" o similar)
+    match_estado = re.search(r"(?:ESTADO|ENTIDAD)[:\s]+([A-Z]{2})\b", texto.upper())
+    if match_estado:
+        datos["estado"] = match_estado.group(1)
+
+    return datos
+
+
+# ─────────────────────────────────────────
+#  PASO 3 — VALIDAR PDF (sin IA)
+# ─────────────────────────────────────────
+def procesar_y_validar_pdf(curp: str, pdf_bytes: bytes) -> dict:
     """
-    Intenta leer el PDF (nativo → OCR → fallo).
-    Devuelve el texto extraído y el método usado.
+    Lee el PDF, busca la CURP del usuario en el texto.
+    - Si la encuentra → válido
+    - Si OCR falló   → revisión
+    - Si no coincide → revisión
     """
     curp = curp.strip().upper()
 
-    if not buscar_curp(curp):
+    registro = buscar_curp(curp)
+    if not registro:
         return {
             "status": "Error",
             "msg": "CURP no registrada. Registra tus datos primero.",
         }
 
+    # Extraer texto
     resultado_ocr = extraer_texto_pdf(pdf_bytes)
-    metodo = resultado_ocr["metodo"]  # "nativo" | "ocr" | "ocr_fallido"
+    metodo = resultado_ocr["metodo"]
     texto = resultado_ocr["texto"]
 
-    return {
-        "status": "Éxito",
-        "metodo": metodo,
-        "texto": texto,
-        "pdf_bytes": pdf_bytes,  # se pasa al siguiente paso
-    }
-
-
-# ─────────────────────────────────────────
-#  PASO 3 — VALIDAR CON IA (Gemini)
-# ─────────────────────────────────────────
-PROMPT_VALIDACION = """
-Eres un validador de documentos oficiales mexicanos.
-Analiza el documento adjunto y el texto extraído que se te proporciona.
-
-Método de extracción usado: {metodo}
-Texto extraído:
-{texto}
-
-Responde ÚNICAMENTE con un objeto JSON (sin markdown, sin explicaciones):
-{{
-  "es_curp_oficial": true | false,
-  "curp": "<18 caracteres o null>",
-  "nombre": "<texto o null>",
-  "apellido_paterno": "<texto o null>",
-  "apellido_materno": "<texto o null>",
-  "fecha_nacimiento": "<DD/MM/AAAA o null>",
-  "sexo": "H" | "M" | null,
-  "estado": "<clave 2 letras o null>",
-  "motivo_rechazo": "<texto breve si es_curp_oficial=false, sino null>"
-}}
-""".strip()
-
-
-def validar_con_ia(pdf_bytes: bytes, texto: str, metodo: str) -> dict:
-    cliente = _get_cliente()
-    if not cliente:
-        return {
-            "es_curp_oficial": False,
-            "motivo_rechazo": "GEMINI_API_KEY no configurada.",
-            "curp": None,
-            "nombre": None,
-            "apellido_paterno": None,
-            "apellido_materno": None,
-            "fecha_nacimiento": None,
-            "sexo": None,
-            "estado": None,
-        }
-
-    prompt = PROMPT_VALIDACION.format(metodo=metodo, texto=texto[:3000])
-
-    try:
-        # Subir el PDF usando el File API del SDK (igual que tu código que funciona)
-        archivo = cliente.files.upload(
-            file=io.BytesIO(pdf_bytes),
-            config={"mime_type": "application/pdf", "display_name": "curp_doc.pdf"},
+    # OCR falló completamente → revisión directa
+    if metodo == "ocr_fallido" or not texto.strip():
+        nombre_archivo = _guardar_pdf(pdf_bytes, curp, valido=False)
+        _actualizar_excel(
+            curp,
+            valido=False,
+            observacion="OCR fallido — revisión manual requerida",
+            archivo=nombre_archivo,
         )
-
-        respuesta = cliente.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=[archivo, prompt],
-        )
-
-        raw = respuesta.text.strip()
-        raw = re.sub(r"^```[a-z]*\n?|```$", "", raw, flags=re.MULTILINE).strip()
-        return json.loads(raw)
-
-    except Exception as e:
-        return {
-            "es_curp_oficial": False,
-            "motivo_rechazo": f"Error al contactar IA: {e}",
-            "curp": None,
-            "nombre": None,
-            "apellido_paterno": None,
-            "apellido_materno": None,
-            "fecha_nacimiento": None,
-            "sexo": None,
-            "estado": None,
-        }
-
-
-# ─────────────────────────────────────────
-#  GUARDAR PDF (con historial)
-# ─────────────────────────────────────────
-def _guardar_pdf(pdf_bytes: bytes, curp: str, valido: bool) -> str:
-    """
-    Guarda el PDF con timestamp para conservar historial.
-    Ejemplo: CURP_20260601_143022.pdf
-    """
-    carpeta = DIR_VALIDOS if valido else DIR_REVISION
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    nombre = f"{curp.upper()}_{timestamp}.pdf"
-    ruta = os.path.join(carpeta, nombre)
-    with open(ruta, "wb") as f:
-        f.write(pdf_bytes)
-    return nombre
-
-
-# ─────────────────────────────────────────
-#  PASO 4 — GUARDAR RESULTADO
-# ─────────────────────────────────────────
-def guardar_resultado_pdf(curp: str, pdf_bytes: bytes, ia: dict, metodo: str) -> dict:
-    """
-    Tras la validación de la IA:
-    - Si es oficial → actualiza Excel, guarda en curp_validos
-    - Si no        → guarda en curp_revision, devuelve error al usuario
-    """
-    curp = curp.strip().upper()
-
-    nombre_archivo = _guardar_pdf(pdf_bytes, curp, ia["es_curp_oficial"])
-
-    df = _leer_excel()
-    idx = df[df["CURP"].str.upper() == curp].index
-
-    if idx.empty:
-        return {"status": "Error", "msg": "CURP no encontrada en el registro."}
-
-    i = idx[0]
-
-    # ── Historial de archivos
-    historial_actual = str(df.at[i, "ArchivosValidados"] or "")
-    nuevo_historial = (historial_actual + "|" + nombre_archivo).strip("|")
-    df.at[i, "ArchivosValidados"] = nuevo_historial
-
-    if not ia["es_curp_oficial"]:
-        df.at[i, "Observaciones"] = ia.get("motivo_rechazo", "Documento no aceptado")
-        _guardar_excel(df)
         return {
             "status": "Revision",
-            "msg": ia.get(
-                "motivo_rechazo", "El documento no parece ser una CURP oficial."
-            ),
-            "archivo": nombre_archivo,
+            "msg": "No se pudo leer el documento. Será revisado manualmente.",
+            "metodo": metodo,
         }
 
-    # ── Actualizar datos con lo que encontró la IA
-    df.at[i, "FechaNacimiento"] = (
-        ia.get("fecha_nacimiento") or df.at[i, "FechaNacimiento"]
+    # Buscar la CURP del usuario en el texto
+    datos_pdf = _extraer_datos_pdf(texto)
+    curp_en_pdf = datos_pdf.get("curp_encontrada")
+
+    if not curp_en_pdf or curp_en_pdf != curp:
+        nombre_archivo = _guardar_pdf(pdf_bytes, curp, valido=False)
+        _actualizar_excel(
+            curp,
+            valido=False,
+            observacion="CURP no encontrada o no coincide con el registro",
+            archivo=nombre_archivo,
+        )
+        return {
+            "status": "Revision",
+            "msg": "La CURP del documento no coincide con tus datos registrados.",
+            "metodo": metodo,
+        }
+
+    # ── Válido: guardar y actualizar Excel
+    nombre_archivo = _guardar_pdf(pdf_bytes, curp, valido=True)
+    datos_finales = _actualizar_excel(
+        curp,
+        valido=True,
+        observacion=f"Validado por OCR ({metodo})",
+        archivo=nombre_archivo,
+        extras=datos_pdf,
     )
-    df.at[i, "Sexo"] = ia.get("sexo") or df.at[i, "Sexo"]
-    df.at[i, "Estado"] = ia.get("estado") or df.at[i, "Estado"]
-    df.at[i, "Validado"] = True
-    df.at[i, "Observaciones"] = f"Validado por IA ({metodo})"
-
-    # Actualizar nombre si la IA lo encontró y el usuario no lo puso
-    if ia.get("nombre"):
-        df.at[i, "Nombre"] = ia["nombre"]
-    if ia.get("apellido_paterno"):
-        df.at[i, "ApellidoPaterno"] = ia["apellido_paterno"]
-    if ia.get("apellido_materno"):
-        df.at[i, "ApellidoMaterno"] = ia["apellido_materno"]
-
-    _guardar_excel(df)
-
-    datos_finales = df.iloc[i].to_dict()
 
     return {
         "status": "Éxito",
@@ -336,12 +224,52 @@ def guardar_resultado_pdf(curp: str, pdf_bytes: bytes, ia: dict, metodo: str) ->
 
 
 # ─────────────────────────────────────────
-#  PASO 5 — EDITAR DATOS
+#  HELPERS — PDF y Excel
+# ─────────────────────────────────────────
+def _guardar_pdf(pdf_bytes: bytes, curp: str, valido: bool) -> str:
+    carpeta = DIR_VALIDOS if valido else DIR_REVISION
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    nombre = f"{curp.upper()}_{timestamp}.pdf"
+    ruta = os.path.join(carpeta, nombre)
+    with open(ruta, "wb") as f:
+        f.write(pdf_bytes)
+    return nombre
+
+
+def _actualizar_excel(
+    curp: str, valido: bool, observacion: str, archivo: str, extras: dict = None
+) -> dict:
+    df = _leer_excel()
+    idx = df[df["CURP"].str.upper() == curp].index
+    if idx.empty:
+        return {}
+
+    i = idx[0]
+
+    # Historial de archivos
+    historial = str(df.at[i, "ArchivosValidados"] or "")
+    df.at[i, "ArchivosValidados"] = (historial + "|" + archivo).strip("|")
+
+    df.at[i, "Validado"] = valido
+    df.at[i, "Observaciones"] = observacion
+
+    # Datos extra extraídos del PDF
+    if extras and valido:
+        if extras.get("fecha_nacimiento"):
+            df.at[i, "FechaNacimiento"] = extras["fecha_nacimiento"]
+        if extras.get("sexo"):
+            df.at[i, "Sexo"] = extras["sexo"]
+        if extras.get("estado"):
+            df.at[i, "Estado"] = extras["estado"]
+
+    _guardar_excel(df)
+    return df.iloc[i].to_dict()
+
+
+# ─────────────────────────────────────────
+#  PASO 4 — EDITAR DATOS
 # ─────────────────────────────────────────
 def editar_datos(curp: str, datos_nuevos: dict) -> dict:
-    """
-    Actualiza nombre, apellidos y edad. No toca el historial de PDFs.
-    """
     curp = curp.strip().upper()
     df = _leer_excel()
     idx = df[df["CURP"].str.upper() == curp].index
@@ -371,9 +299,6 @@ def editar_datos(curp: str, datos_nuevos: dict) -> dict:
 #  OBTENER PDF MÁS RECIENTE VALIDADO
 # ─────────────────────────────────────────
 def obtener_pdf_valido(curp: str) -> str | None:
-    """
-    Devuelve la ruta del PDF válido más reciente, o None si no hay.
-    """
     datos = buscar_curp(curp)
     if not datos:
         return None
@@ -381,7 +306,6 @@ def obtener_pdf_valido(curp: str) -> str | None:
     historial = str(datos.get("ArchivosValidados") or "")
     archivos = [a for a in historial.split("|") if a]
 
-    # Solo los que están en curp_validos
     for nombre in reversed(archivos):
         ruta = os.path.join(DIR_VALIDOS, nombre)
         if os.path.exists(ruta):
