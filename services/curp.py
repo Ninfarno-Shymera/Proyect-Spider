@@ -19,8 +19,8 @@ Carpetas:
 import os
 import re
 import json
-import base64
-import httpx
+import io
+from google import genai
 import pandas as pd
 from datetime import datetime
 from dotenv import load_dotenv
@@ -30,10 +30,15 @@ load_dotenv()
 
 # ── API Gemini
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GEMINI_API = (
-    "https://generativelanguage.googleapis.com/v1beta/models"
-    "/gemini-1.5-flash:generateContent"
-)
+_cliente_gemini = None
+
+
+def _get_cliente():
+    global _cliente_gemini
+    if not _cliente_gemini and GEMINI_API_KEY:
+        _cliente_gemini = genai.Client(api_key=GEMINI_API_KEY)
+    return _cliente_gemini
+
 
 # ── Rutas
 BASE_DIR = os.path.join("resource", "curp")
@@ -200,7 +205,8 @@ Responde ÚNICAMENTE con un objeto JSON (sin markdown, sin explicaciones):
 
 
 def validar_con_ia(pdf_bytes: bytes, texto: str, metodo: str) -> dict:
-    if not GEMINI_API_KEY:
+    cliente = _get_cliente()
+    if not cliente:
         return {
             "es_curp_oficial": False,
             "motivo_rechazo": "GEMINI_API_KEY no configurada.",
@@ -213,35 +219,21 @@ def validar_con_ia(pdf_bytes: bytes, texto: str, metodo: str) -> dict:
             "estado": None,
         }
 
-    pdf_b64 = base64.standard_b64encode(pdf_bytes).decode()
     prompt = PROMPT_VALIDACION.format(metodo=metodo, texto=texto[:3000])
 
-    payload = {
-        "contents": [
-            {
-                "parts": [
-                    {
-                        "inline_data": {
-                            "mime_type": "application/pdf",
-                            "data": pdf_b64,
-                        }
-                    },
-                    {"text": prompt},
-                ]
-            }
-        ],
-        "generationConfig": {"temperature": 0, "maxOutputTokens": 512},
-    }
-
     try:
-        resp = httpx.post(
-            f"{GEMINI_API}?key={GEMINI_API_KEY}",
-            json=payload,
-            headers={"Content-Type": "application/json"},
-            timeout=30,
+        # Subir el PDF usando el File API del SDK (igual que tu código que funciona)
+        archivo = cliente.files.upload(
+            file=io.BytesIO(pdf_bytes),
+            config={"mime_type": "application/pdf", "display_name": "curp_doc.pdf"},
         )
-        resp.raise_for_status()
-        raw = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+
+        respuesta = cliente.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=[archivo, prompt],
+        )
+
+        raw = respuesta.text.strip()
         raw = re.sub(r"^```[a-z]*\n?|```$", "", raw, flags=re.MULTILINE).strip()
         return json.loads(raw)
 
