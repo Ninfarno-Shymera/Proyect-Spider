@@ -418,13 +418,18 @@ const VISTAS = {
 
         <!-- ETAPA 3: VALIDANDO -->
         <div id="etapa-validando" class="bloque-blanco oculto-display" style="text-align:center;padding:40px;">
-            <p style="font-size:1.1rem;color:var(--text-secondary);">⏳ Analizando documento con IA...</p>
+            <p style="font-size:1.1rem;color:var(--text-secondary);">⏳ Analizando documento...</p>
+            <p style="font-size:1.1rem;color:var(--text-secondary);"> Por favor, espere...</p>
         </div>
 
         <!-- ETAPA 4: RESULTADO -->
         <div id="etapa-resultado" class="bloque-blanco oculto-display">
             <h3>Datos registrados</h3>
             <p id="res-metodo" style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:15px;"></p>
+            <div id="res-aviso-expirado" style="display:none;background:#fef3c7;border:1px solid #f59e0b;
+                border-radius:8px;padding:12px;margin-bottom:15px;color:#92400e;font-size:0.9rem;">
+                ⚠️ Tu documento ha expirado (más de 7 días). Por favor sube un nuevo PDF de CURP.
+            </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                 <div class="dato-item" style="grid-column:1/-1;">
                     <strong>CURP:</strong>

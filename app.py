@@ -17,6 +17,7 @@ from services.curp import (
     buscar_curp,
     validar_formato_curp,
     obtener_pdf_valido,
+    limpiar_expirados,
 )
 from services.sprites import recolorear_sprite
 
@@ -346,6 +347,12 @@ def curp_ver_pdf(curp):
         app.logger.error(f"Error sirviendo PDF de CURP: {e}")
         abort(500)
 
+
+# ─────────────────────────────────────────
+#  LIMPIEZA AL ARRANCAR
+# ─────────────────────────────────────────
+with app.app_context():
+    limpiar_expirados()
 
 # ─────────────────────────────────────────
 #  ARRANQUE
