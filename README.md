@@ -68,7 +68,7 @@ Calcula la **recta de regresión por mínimos cuadrados** a partir de un archivo
 
 ### ✅ Registro CURP — **Completo**
 
-Flujo de registro de personas con validación documental por IA.
+Flujo de registro de personas con validación documental mediante OCR y regex.
 
 **Flujo en 4 pasos:**
 
@@ -78,15 +78,16 @@ Flujo de registro de personas con validación documental por IA.
 
 2. **Subida de PDF** — Documento oficial de CURP
 
-3. **Lectura + validación por IA** — El PDF se procesa con el módulo OCR y luego se envía a **Gemini 1.5 Flash**, que determina si es un documento oficial y extrae: nombre, apellidos, fecha de nacimiento, sexo y estado
+3. **Lectura y validación** — El PDF se procesa con el módulo OCR (pdfplumber nativo, con fallback a pytesseract). Se busca la CURP dentro del texto extraído con el regex oficial y se compara contra la registrada. Los datos de fecha de nacimiento, sexo y estado se decodifican directamente de la estructura de la CURP (sin IA externa)
 
-4. **Resultado** — Si es válido: se guarda el PDF en `curp_validos/` y se actualiza el registro. Si no: va a `curp_revision/` y se pide un nuevo documento
+4. **Resultado** — Si coincide: se guarda el PDF en `curp_validos/` y se actualiza el registro. Si no: va a `curp_revision/` y se pide un nuevo documento
 
 **Funciones adicionales:**
 - Detección de CURP duplicada antes de registrar
 - Historial de PDFs subidos (con timestamp) conservado en el Excel
 - Edición de datos sin perder historial de documentos
 - Endpoint para visualizar el PDF válido más reciente
+- Limpieza automática al arrancar: marca como expirados los registros con PDF de más de 7 días y borra físicamente los PDFs de revisión viejos
 
 **Rutas:**
 ```
@@ -99,19 +100,19 @@ GET  /curp/pdf/<curp>
 
 ---
 
-### 🔧 Análisis CFE — **En Mantenimiento**
+### 🧪 Análisis CFE — **Funcional (en pruebas)**
 
 Extrae y analiza datos de recibos de luz de CFE en formato PDF.
 
-> ⚠️ Este módulo está actualmente marcado como **"En Mantenimiento"** en la interfaz. La funcionalidad existe en el código pero puede estar desactualizada respecto al formato actual de los recibos.
+> ℹ️ El módulo está operativo. El flujo de extracción nativa (pdfplumber) ha sido validado. **El fallback OCR (pytesseract) aún no ha sido probado en producción** con recibos escaneados.
 
-**Lo que hace (cuando está activo):**
+**Lo que hace:**
 
-- Procesa uno o varios PDFs de CFE (extracción nativa o fallback OCR)
+- Procesa uno o varios PDFs de CFE (extracción nativa, con fallback automático a OCR si el texto es muy corto)
 - Extrae: número de servicio, consumo en kWh, adeudo anterior, total a pagar e historial de hasta 11 periodos
-- Guarda todos los datos en `datos_cfe.xlsx` (filas intercaladas: precios / consumos)
+- Guarda todos los datos en `datos_cfe.xlsx` (filas intercaladas: precios / consumos por servicio)
 - Con múltiples archivos: muestra estadísticas globales (media, mediana, moda, varianza, desv. estándar) tanto de pagos como de consumo
-- Genera gráficas de línea con Chart.js
+- Genera gráficas de línea con Chart.js (historial individual y promedios globales)
 
 **Rutas:**
 ```
@@ -119,9 +120,8 @@ POST /procesar
 GET  /estadisticas
 ```
 
-**Pendiente / posibles causas del mantenimiento:**
-- El mapeo de periodos históricos está fijo hasta `OCT 25 / SEP 25` — necesita actualizarse para cubrir 2026
-- El formato del recibo puede haber cambiado y los regex de extracción podrían necesitar ajuste
+**Pendiente de prueba:**
+- Validar extracción con recibos escaneados (flujo OCR)
 
 ---
 
@@ -168,9 +168,6 @@ const TEMA_BASE = "aqua";
 Crear un archivo `.env` en la raíz con:
 
 ```env
-# Requerida para el módulo CURP (validación con IA)
-GEMINI_API_KEY=tu_clave_aqui
-
 # Solo necesarias en Windows (en Linux/Render se detectan automáticamente)
 TESSERACT_PATH=C:\Program Files\Tesseract-OCR\tesseract.exe
 POPPLER_PATH=C:\poppler\bin
@@ -205,8 +202,8 @@ La app estará disponible en `http://localhost:5000`.
 | Módulo | Estado | Notas |
 |---|---|---|
 | Extractor de Rectas | ✅ Completo | Funcional |
-| Registro CURP | ✅ Completo | Requiere `GEMINI_API_KEY` |
-| Análisis CFE | 🔧 Mantenimiento | Mapeo de periodos desactualizado |
+| Registro CURP | ✅ Completo | Validación por OCR + regex, sin IA externa |
+| Análisis CFE | 🧪 En pruebas | Funcional, OCR fallback pendiente de probar |
 | Trabajos | 🚧 Sin implementar | Placeholder |
 | Carmilla (Capa 1) | ✅ Completo | Animación e interacción |
 | Carmilla (Capa 2) | 🚧 En desarrollo | Chat pendiente |
